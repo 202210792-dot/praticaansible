@@ -13,6 +13,6 @@ mariadb_app_password: "LampUser_Pass_2026!"
 # Variables para Rol Samba
 samba_sys_user: "colab_samba"
 samba_user_password: "Samba_Pass_2026!"
-samba_share_path: ""
+samba_share_path: "/srv/samba/compartido"
 
 
