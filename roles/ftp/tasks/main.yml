@@ -17,6 +17,5 @@
   ansible.builtin.systemd:
     name: vsftpd
     state: started
-    enabled: true#SPDX-License-Identifier: MIT-0
----
-# tasks file for roles/ftp
+    enabled: true
+

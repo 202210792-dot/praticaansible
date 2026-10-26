@@ -45,6 +45,5 @@
     enabled: true
   loop:
     - smb
-    - nmb#SPDX-License-Identifier: MIT-0
----
-# tasks file for roles/samba
+    - nmb
+
