@@ -1,18 +1,13 @@
 ansible_user: "virginia"
 ansible_become_password: "1234v"
 
-
-
-
 # Variables para Rol LAMP (MariaDB)
-mariadb_root_password: "RootDB_Password_2026!"
-mariadb_app_db: "app_lamp_db"
-mariadb_app_user: "lamp_user"
-mariadb_app_password: "LampUser_Pass_2026!"
+mariadb_root_password: "Aso_virginia_2026!"
+mariadb_app_db: "prt01_db_aso"
+mariadb_app_user: "virginia_user"
+mariadb_app_password: "aso_good_26!"
 
 # Variables para Rol Samba
-samba_sys_user: "colab_samba"
-samba_user_password: "Samba_Pass_2026!"
+samba_sys_user: "virginia_samba"
+samba_user_password: "mundolibre"
 samba_share_path: "/srv/samba/compartido"
-
-

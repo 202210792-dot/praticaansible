@@ -1,112 +1,76 @@
-===============================================================================
-PROYECTO: Tarea 3 y 4  Automatizado con Ansible + GitHub (LAMP, Samba, FTP)
-SISTEMA OPERATIVO OBJETIVO: openSUSE 16.0
-================================================================================
+Tarea 3 y 4  Automatizado con Ansible + GitHub
+Sistema Operativo: openSUSE 16.0
+
 
 --------------------------------------------------------------------------------
-a) ENLACE AL REPOSITORIO DE GITHUB
---------------------------------------------------------------------------------
-URL del repositorio: https://github.com/202210792-dot/praticaansible
-
---------------------------------------------------------------------------------
-b) PASOS PARA EJECUTAR EL PROYECTO DE ANSIBLE
---------------------------------------------------------------------------------
-
-1. CLONAR EL REPOSITORIO
+A) CLONAR EL REPOSITORIO
    Descargue el proyecto y acceda al directorio de trabajo:
 
    git clone https://github.com/202210792-dot/praticaansible.git
 
-2. INSTALAR COLECCIONES REQUERIDAS EN EL NODO CENTRAL
-   Ejecute el siguiente comando para asegurar que los módulos de zypper y
-   MariaDB estén disponibles en la máquina controladora:
+B) INSTALAR COLECCIONES REQUERIDAS EN EL NODO CENTRAL
 
+   sudo zypper install ansible
    ansible-galaxy collection install community.general community.mysql ansible.posix
 
-3. CONFIGURAR ACCESO SSH SIN CONTRASEÑA HACIA EL SERVIDOR DESTINO
-   Genere la llave SSH dedicada para Ansible y cópiela al servidor openSUSE 16.0
-   (reemplace 'usuario' y '192.168.1.X' por los datos del servidor destino):
+C) CONFIGURAR ACCESO SSH SIN CONTRASEÑA HACIA EL SERVIDOR DESTINO
+   Crea una llave digital para que Ansible se conecte al servidor automáticamente sin 
+   pedir clave en cada paso, (reemplaza `virginia` y `192.168.1.66` por el usuario y la IP de tu servidor):
 
    ssh-keygen -t ed25519 -f ~/.ssh/id_ansible -C "ansible-control" -N ""
-   ssh-copy-id -i ~/.ssh/id_ansible.pub usuario@192.168.1.X
+   ssh-copy-id -i ~/.ssh/id_ansible.pub virginia@192.168.1.66
 
-4. CONFIGURAR EL ARCHIVO DE INVENTARIO (inventory.ini)
-   Edite el archivo 'inventory.ini' y coloque la dirección IP real del servidor
-   destino openSUSE 16.0:
+D) CONFIGURAR EL ARCHIVO DE INVENTARIO
+   Abre el archivo `inventory.ini` y reemplaza la IP de ejemplo por la dirección IP real de tu servidor:
 
    [opensuse_servers]
-   servidor_opensuse ansible_host=192.168.1.50
+   servidor_opensuse ansible_host=192.168.1.66
 
-   * Nota de seguridad: Por buenas prácticas, 'inventory.ini' no contiene nombres
-     de usuario ni contraseñas en texto plano.
-
-5. CREDENCIALES  
-   Las credenciales de conexión SSH/sudo y las contraseñas de MariaDB, Samba y
-   SQL se encuentran cifradas con AES-256 en 'group_vars/all/vault.yml'.
+E) CREDENCIALES  
+   Todos los usuarios y contraseñas del sistema (SSH, administrador, MariaDB, Samba y SQL)
+   están guardados en el archivo:'group_vars/all/credenciales.yml'.
 
 
-6. VERIFICAR CONECTIVIDAD Y ESCALACIÓN DE PRIVILEGIOS
-   Compruebe que el nodo de control se comunica con el servidor openSUSE 16.0:
+F) VERIFICAR CONECTIVIDAD Y ESCALACIÓN DE PRIVILEGIOS
+   Verifica que tu máquina pueda conectarse y comunicarse correctamente con el servidor openSUSE:
 
-   ansible opensuse_servers -m ping 
-   ansible opensuse_servers -m command -a "whoami" --become 
+   ansible opensuse_servers -m ping
+   ansible opensuse_servers -m command -a "whoami" --become
 
-7. EJECUTAR EL PLAYBOOK PRINCIPAL (DESPLIEGUE)
-   Valide la sintaxis y ejecute el aprovisionamiento completo:
+G) EJECUTAR EL PLAYBOOK PRINCIPAL (DESPLIEGUE)
+   Revisa que el código no tenga errores de escritura y luego inicia la instalación automática en el servidor:
 
    ansible-playbook site.yml --syntax-check
-   ansible-playbook site.yml 
+   ansible-playbook site.yml
 
 
-8. COMPROBAR Y VALIDAR LOS SERVICIOS DESPLEGADOS
+H) COMPROBAR Y VALIDAR LOS SERVICIOS DESPLEGADOS
+   Cuando termine la instalación sin errores, haz estas pruebas desde tu computadora principal
+   para confirmar que todo quedó bien:
 
-   Una vez finalizada la ejecución exitosa del playbook, ejecute las siguientes 
-   pruebas desde el nodo central para validar el funcionamiento de cada servicio:
- 
-   1. Confirmar que todos los demonios están activos y ejecutándose correctamente:
-      (Debe retornar el estado "active" para cada servicio: apache2, mariadb, smb, nmb y vsftpd)
+   # 1. Verifica que todos los servicios estén activos y funcionando correctamente:
+
+   ansible opensuse_servers -m shell -a "systemctl is-active apache2 mariadb smb nmb vsftpd" --become
+
+
+
+   # 2. Verificar que Apache y PHP responden por HTTP (cambia por tu IP destino)
+
+   curl -I http://192.168.1.66/info.php
+
+   curl -I http://192.168.1.66/phpMyAdmin/
+      
+      * Credenciales de acceso a phpMyAdmin:
+            - Usuario: virginia_user
+            - Contraseña: aso_good_26!
+
+
+   # 3. Verificar que Samba lista el recurso compartido con el usuario creado
    
-      ansible opensuse_servers -m shell -a "systemctl is-active apache2 mariadb smb nmb vsftpd" --become
-
-   2. Verificar el servidor web Apache, PHP y phpMyAdmin:
-      - Comprobación del archivo de prueba PHP (información de versión y módulos):
-        * URL de acceso web: http://192.168.1.x/info.php
-        * Comando de verificación por terminal:
-          curl -I http://192.168.1.15/info.php
-          (Resultado esperado: HTTP/1.1 200 OK)
+   sudo zypper install -y samba-client
    
-       - Comprobación de la interfaz gráfica de administración:
-        * URL de acceso web: http://192.168.1.15/phpMyAdmin/
-        * Comando de verificación por terminal:
-          curl -I http://192.168.1.15/phpMyAdmin/
-          (Resultado esperado: HTTP/1.1 200 OK o redirección 302)
-       
-         * Credenciales de acceso a phpMyAdmin:
-       - Usuario: lamp_user (o root)
-       - Contraseña: Lamp_Umss_2026! (o RootDB_Umss_2026!)
-
-   3. Verificar el funcionamiento del servidor Samba:
-      (Asegúrese de tener instalado el cliente Samba con 'sudo zypper install -y samba-client')
-      Ejecute el siguiente comando para listar los recursos compartidos:
+   smbclient -L //192.168.1.66 -U virginia_samba
    
-      smbclient -L //192.168.1.15 -U "colab_samba%Samba_Umss_2026!"
-      (Resultado esperado: Visualización de la tabla con el recurso 'RecursosCompartidos')
-
-    
-
---------------------------------------------------------------------------------
-c) ESTRUCTURA DE ROLES IMPLEMENTADOS Y OPTIMIZACIÓN
---------------------------------------------------------------------------------
-- ansible.cfg : Optimizado con Pipelining SSH, ControlPersist (multiplexación)
-                y caché local de facts en formato JSON para reducir tiempos de
-                respuesta.
-- roles/lamp  : Instala Apache2, PHP8, MariaDB y phpMyAdmin; asegura el motor
-                de base de datos y despliega la plantilla phpmyadmin.conf.j2.
-- roles/samba : Instala Samba, crea el usuario del sistema (nologin), registra
-                credenciales en smbpasswd, crea el directorio compartido y
-                aplica máscara de permisos 0770 mediante smb.conf.j2.
-- roles/ftp   : Instala vsftpd y despliega la plantilla vsftpd.conf.j2 con
-                jaula chroot local y puertos pasivos acotados.
-
-================================================================================
-EOF
+   * Credenciales de acceso a Samba:
+            - Usuario: virginia_samba
+            - Contraseña: mundolibre
