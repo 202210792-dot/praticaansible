@@ -50,7 +50,7 @@ H) COMPROBAR Y VALIDAR LOS SERVICIOS DESPLEGADOS
 
    # 1. Verifica que todos los servicios estén activos y funcionando correctamente:
 
-   ansible opensuse_servers -m shell -a "systemctl is-active apache2 mariadb smb nmb vsftpd" --become
+   ansible opensuse_servers -m shell -a "systemctl is-active apache2 mariadb smb nmb vsftpd postgresql" --become
 
 
 

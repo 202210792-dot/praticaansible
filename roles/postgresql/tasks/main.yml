@@ -1,0 +1,91 @@
+
+# tasks file for roles/postgresql
+# Archivo: roles/postgresql/tasks/main.yml
+---
+- name: Instalar PostgreSQL, librería PHP-PostgreSQL y dependencia psycopg2
+  community.general.zypper:
+    name:
+      - postgresql-server
+      - postgresql
+      - postgresql-contrib
+      - php8-pgsql
+      - python3-psycopg2
+      - openssl
+    state: present
+
+- name: Iniciar servicio PostgreSQL por primera vez (inicializa el clúster en openSUSE)
+  ansible.builtin.systemd:
+    name: postgresql
+    state: started
+    enabled: true
+
+- name: Generar certificado y clave SSL en /var/lib/pgsql/data para cifrado
+  ansible.builtin.command: >
+    openssl req -new -x509 -days 365 -nodes -text
+    -out /var/lib/pgsql/data/server.crt
+    -keyout /var/lib/pgsql/data/server.key
+    -subj "/CN=opensuse-postgresql"
+  args:
+    creates: /var/lib/pgsql/data/server.key
+
+- name: Ajustar permisos estrictos de la clave privada SSL de PostgreSQL
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    owner: postgres
+    group: postgres
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: '/var/lib/pgsql/data/server.key', mode: '0600' }
+    - { path: '/var/lib/pgsql/data/server.crt', mode: '0644' }
+
+- name: Configurar PostgreSQL para escuchar conexiones remotas y activar SSL
+  ansible.builtin.lineinfile:
+    path: /var/lib/pgsql/data/postgresql.conf
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    state: present
+  loop:
+    - { regexp: "^#?listen_addresses", line: "listen_addresses = '*'" }
+    - { regexp: "^#?ssl = ", line: "ssl = on" }
+    - { regexp: "^#?ssl_cert_file", line: "ssl_cert_file = 'server.crt'" }
+    - { regexp: "^#?ssl_key_file", line: "ssl_key_file = 'server.key'" }
+    - { regexp: "^#?password_encryption", line: "password_encryption = scram-sha-256" }
+  notify: Reiniciar PostgreSQL
+
+- name: Desplegar plantilla pg_hba.conf con soporte hostssl remoto
+  ansible.builtin.template:
+    src: pg_hba.conf.j2
+    dest: /var/lib/pgsql/data/pg_hba.conf
+    owner: postgres
+    group: postgres
+    mode: '0600'
+  notify: Reiniciar PostgreSQL
+
+- name: Forzar ejecución de handlers antes de conectar a la base de datos
+  ansible.builtin.meta: flush_handlers
+
+- name: Establecer contraseña del superusuario postgres
+  become: true
+  become_user: postgres
+  community.postgresql.postgresql_user:
+    name: postgres
+    password: "{{ pg_superuser_password }}"
+    state: present
+
+- name: Crear nuevo usuario de PostgreSQL
+  become: true
+  become_user: postgres
+  community.postgresql.postgresql_user:
+    name: "{{ pg_db_user }}"
+    password: "{{ pg_db_password }}"
+    role_attr_flags: CREATEDB,LOGIN
+    state: present
+
+- name: Crear nueva base de datos asignada al usuario
+  become: true
+  become_user: postgres
+  community.postgresql.postgresql_db:
+    name: "{{ pg_db_name }}"
+    owner: "{{ pg_db_user }}"
+    encoding: UTF-8
+    state: present

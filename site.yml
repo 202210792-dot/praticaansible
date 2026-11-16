@@ -18,3 +18,4 @@
     - role: lamp
     - role: samba
     - role: ftp
+    - role: postgresql
